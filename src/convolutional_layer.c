@@ -175,7 +175,8 @@ matrix forward_convolutional_layer(layer l, matrix in)
     int outh = (l.height-1)/l.stride + 1;
     matrix out = make_matrix(in.rows, outw*outh*l.filters);
     for(i = 0; i < in.rows; ++i){
-        image example = float_to_image(in.data + i*in.cols, l.width, l.height, l.channels);
+        image example = float_to_image(
+          in.data + i*in.cols, l.width, l.height, l.channels);
         matrix x = im2col(example, l.size, l.stride);
         matrix wx = matmul(l.w, x);
         for(j = 0; j < wx.rows*wx.cols; ++j){
@@ -248,6 +249,13 @@ matrix backward_convolutional_layer(layer l, matrix dy)
 void update_convolutional_layer(layer l, float rate, float momentum, float decay)
 {
     // TODO: 5.3
+    axpy_matrix(decay, l.w, l.dw);
+    axpy_matrix(-rate, l.dw, l.w);
+    scal_matrix(momentum, l.dw);
+
+    // Do the same for biases as well but no need to use weight decay on biases
+    axpy_matrix(-rate, l.db, l.b);
+    scal_matrix(momentum, l.db);
 }
 
 // Make a new convolutional layer
