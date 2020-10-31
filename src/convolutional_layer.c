@@ -40,6 +40,51 @@ matrix backward_convolutional_bias(matrix dy, int n)
     return db;
 }
 
+
+
+float im2col_get_pixel(float *im, int height, int width, int channels,
+                        int row, int col, int channel, int pad)
+{
+    row -= pad;
+    col -= pad;
+
+    if (row < 0 || col < 0 ||
+        row >= height || col >= width) return 0;
+    return im[col + width*(row + height*channel)];
+}
+
+//From Berkeley Vision's Caffe!
+//https://github.com/BVLC/caffe/blob/master/LICENSE
+void im2col_cpu(float* data_im,
+     int channels,  int height,  int width,
+     int size,  int stride, int pad, float* data_col) 
+{
+    int c,h,w;
+    int outh = (height + 2*pad - size) / stride + 1;
+    int outw = (width + 2*pad - size) / stride + 1;
+
+    int rows = channels * size * size;
+    for (c = 0; c < rows; ++c) {
+        int w_offset = (c % (size * size)) % size;
+        int h_offset = (c % (size * size)) / size;
+         (c / size) % size;
+        int c_im = c / size / size;
+        for (h = 0; h < outh; ++h) {
+            for (w = 0; w < outw; ++w) {
+                int im_row = h_offset + h * stride;
+                int im_col = w_offset + w * stride;
+                int col_index = (c * outh + h) * outw + w;
+                data_col[col_index] = im2col_get_pixel(data_im, height, width, channels,
+                        im_row, im_col, c_im, pad);
+            }
+        }
+    }
+}
+
+
+
+
+
 // Make a column matrix out of an image
 // image im: image to process
 // int size: kernel size for convolution operation
@@ -47,19 +92,36 @@ matrix backward_convolutional_bias(matrix dy, int n)
 // returns: column matrix
 matrix im2col(image im, int size, int stride)
 {
-    int i, j, k;
     int outw = (im.w-1)/stride + 1;
     int outh = (im.h-1)/stride + 1;
+    
     int rows = im.c*size*size;
     int cols = outw * outh;
+    int size_sq = size * size;
+
     matrix col = make_matrix(rows, cols);
 
-    // TODO: 5.1
-    // Fill in the column matrix with patches from the image
+    for (int c = 0; c < rows; ++c) {
+      int c_im = c / size_sq;
+      int w_im = (c % size_sq) % size;
+      int h_im = (c % size_sq) / size;
+      for (int j_col = 0; j_col < cols; ++j_col) {
+        int w = j_col % outw;
+        int h = (j_col / outw) % outh;
+        col.data[c * cols + j_col] = im2col_get_pixel(
+            im.data, im.h, im.w, im.c,
+            h_im + h * stride,
+            w_im + w * stride,
+            c_im,
+            size % 2 ? (size-1)/2 : size / 2
+        );
+      }
+    }
 
+      // TODO: 5.1
+      // Fill in the column matrix with patches from the image
 
-
-    return col;
+      return col;
 }
 
 // The reverse of im2col, add elements back into image
