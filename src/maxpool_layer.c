@@ -18,10 +18,10 @@ matrix forward_maxpool_layer(layer l, matrix in)
 
     int outw = (l.width-1)/l.stride + 1;
     int outh = (l.height-1)/l.stride + 1;
-    int sizesq = l.size * l.size;
     matrix out = make_matrix(in.rows, outw*outh*l.channels);
 
     // TODO: 6.1 - iterate over the input and fill in the output with max values
+    int sizesq = l.size * l.size;
     for (int i = 0; i < in.rows; ++i) {
       image im = float_to_image(
         in.data + i*in.cols, l.width, l.height, l.channels
@@ -30,15 +30,15 @@ matrix forward_maxpool_layer(layer l, matrix in)
       for (int j = 0; j < out.cols; ++j) {
         int c_im = j / (outw * outh);
         int j_col = j % (outw * outh);
-        float maxv = FLT_MIN;
+        float v_max = -FLT_MAX;
         for (int k = 0; k < sizesq; ++k) {
           int col_index = c_im * (outw * outh * sizesq) +
                           k * (outw * outh) + j_col;
-          if (col.data[col_index] > maxv) {
-            maxv = col.data[col_index];
+          if (col.data[col_index] > v_max) {
+            v_max = col.data[col_index];
           }
         }
-        out.data[i*out.cols + j] = maxv;
+        out.data[i*out.cols + j] = v_max;
       }
       free_matrix(col);
     }
@@ -78,33 +78,37 @@ matrix backward_maxpool_layer(layer l, matrix dy)
       for (int j = 0; j < dy.cols; ++j) {
         int c_im = j / (outw * outh);
         int j_col = j % (outw * outh);
-        float maxv = FLT_MIN;
-        int maxk = 0;
+        float v_max = -FLT_MAX;
+        int k_max = -1;
         for (int k = 0; k < sizesq; ++k) {
           int col_index = c_im * (outw * outh * sizesq) +
                           k * (outw * outh) + j_col;
-          if (col.data[col_index] > maxv) {
-            maxv = col.data[col_index];
-            maxk = k;
+          if (col.data[col_index] > v_max) {
+            v_max = col.data[col_index];
+            k_max = k;
           }
         }
 
+        if (k_max == -1)
+          continue;
+
         int w = j_col % outw;
         int h = (j_col / outw) % outh;
-
-        int w_kernel = maxk % l.size;
-        int h_kernel = maxk / l.size;
-
+        int w_kernel = k_max % l.size;
+        int h_kernel = k_max / l.size;
         int x = w * l.stride + w_kernel - pad;
         int y = h * l.stride + h_kernel - pad;
         if (x >= 0 && y >= 0 && x < l.width && y < l.height) {
-        dx.data[c_im*(l.height * l.width) + y*(l.width) + x] = 
-            dy.data[i*dy.cols + j];
+          int dx_index =
+            i * dx.cols +
+            c_im * (l.width * l.height) +
+            y * (l.width) +
+            x;
+          dx.data[dx_index] += dy.data[i*dy.cols + j];
         }
       }
       free_matrix(col);
     }
-
     return dx;
 }
 

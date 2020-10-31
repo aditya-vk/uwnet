@@ -270,8 +270,6 @@ void test_maxpool_layer()
     im_mat3.cols = im.w*im.h*im.c;
     im_mat3.data = im.data;
 
-    printf("im: %d %d %d\n", im.w, im.h, im.c);
-
     layer max_l = make_maxpool_layer(im.w, im.h, im.c, 2, 2);
     layer max_l3 = make_maxpool_layer(im.w, im.h, im.c, 3, 2);
 
