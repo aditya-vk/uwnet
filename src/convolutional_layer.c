@@ -51,7 +51,20 @@ float get_padded_pixel(image im, int x, int y, int c)
 
     assert(c >= 0);
     assert(c < im.c);
-    return im.data[x + im.w*(y + im.h*c)];
+    return get_pixel(im, x, y, c);
+}
+
+/// image::get_pixel, with padding uncommented
+void set_padded_pixel(image im, int x, int y, int c, float v)
+{
+    if(x >= im.w) return;
+    if(y >= im.h) return;
+    if(x < 0) return;
+    if(y < 0) return;
+
+    assert(c >= 0);
+    assert(c < im.c);
+    return set_pixel(im, x, y, c, v);
 }
 
 // Make a column matrix out of an image
@@ -94,7 +107,7 @@ matrix im2col(image im, int size, int stride)
         );
       }
     }
-      return col;
+    return col;
 }
 
 // The reverse of im2col, add elements back into image
@@ -104,17 +117,44 @@ matrix im2col(image im, int size, int stride)
 // image im: image to add elements back into
 image col2im(int width, int height, int channels, matrix col, int size, int stride)
 {
-    int i, j, k;
-
     image im = make_image(width, height, channels);
-    int outw = (im.w-1)/stride + 1;
-    int rows = im.c*size*size;
 
     // TODO: 5.2
     // Add values into image im from the column matrix
+    int outw = (im.w-1)/stride + 1;
+    int outh = (im.h-1)/stride + 1;
     
+    int rows = im.c*size*size;
+    int cols = outw * outh;
+    int size_sq = size * size;
 
+    int pad = 0;
+    if (size % 2 == 1) {
+      pad = (size - 1) / 2;
+    } else {
+      pad = ((outw - 1) * stride + 1) + (size - 1) - im.w;
+      if (pad < 0) {
+        pad = 0;
+      }
+    }
 
+    for (int c = 0; c < rows; ++c) {
+      int c_im = c / size_sq;
+      int w_im = (c % size_sq) % size;
+      int h_im = (c % size_sq) / size;
+      for (int j_col = 0; j_col < cols; ++j_col) {
+        int w = j_col % outw;
+        int h = (j_col / outw) % outh;
+
+        int x = w_im + w * stride - pad;
+        int y = h_im + h * stride - pad;
+
+        float value =
+            get_padded_pixel(im, x, y, c_im) + 
+            col.data[c * cols + j_col];
+        set_padded_pixel(im, x, y, c_im, value);
+      }
+    }
     return im;
 }
 
