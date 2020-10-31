@@ -3,53 +3,28 @@
   <head>
     <meta charset="utf-8">
     <title>Index</title>
-<style>
-foreignObject {overflow:visible}
-</style>
+    <style>
+        foreignObject {overflow:visible}
+        img {max-width:100%;
+        vertical-align:middle;}
+
+    </style>
 
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <!--script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script-->
-
     <script src="https://www.desmos.com/api/v1.5/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script>mermaid.initialize({startOnLoad:false,
-        flowchart:{
-            curve:'basis',
-            htmlLabels:true,
-        },
-        theme: 'default',
-        themeVariables:{
-            edgeLabelBackground:'#fff',
-        },
-    });
-    window.onload = function(){
-                mermaid.init();
 
-                window.MathJax = {
-                  tex: {
-                    macros: {
-                      d: "{\\nabla}",
-                    }
-                  }
-                };
-
-                (function () {
-                  var script = document.createElement('script');
-                  script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
-                  script.async = true;
-                  document.head.appendChild(script);
-                })();
-        
-    };
-    </script>
   </head>
   <body>
     <h1 id="an-introduction-to-deep-learning">An Introduction To Deep Learning</h1>
 
 <h2 id="table-of-contents">Table of Contents</h2>
 
-<p><a href="lectures/01">Chapter 1 - Machine Learning Review</a></p>
+<ul>
+  <li><a href="notes/01">Chapter 1 - Machine Learning Review</a></li>
+  <li><a href="notes/04">Chapter 4 - Convolutional Neural Networks</a></li>
+  <li><a href="slides/09">Chapter 9 - Recurrent Neural Networks</a></li>
+</ul>
 
 
   </body>
