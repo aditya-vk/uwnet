@@ -43,5 +43,10 @@ print("test accuracy:     %f", accuracy_net(m, test))
 # How accurate is the fully connected network vs the convnet when they use similar number of operations?
 # Why are you seeing these results? Speculate based on the information you've gathered and what you know about DL and ML.
 # Your answer:
-#
-
+# ConvNets training accuracy: 0.699
+# ConvNets test accuracy:     0.647
+# Given the same number of operations, ConvNets are expected to be better since the 
+# given number of limited computations are used to compute local features whereas a 
+# fully connected network approximates a function that attempts to relate pixels from 
+# entirely different sections of the image. Since images we are concerned have a structure
+# local features are stronger indication and lead to better results.
