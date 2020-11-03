@@ -41,6 +41,24 @@ matrix backward_convolutional_bias(matrix dy, int n)
     return db;
 }
 
+/// compute necessary padding for a kernel layer
+int compute_padding(int width, int height, int size, int stride)
+{
+    int outw = (width  - 1) / stride + 1;
+    int outh = (height - 1) / stride + 1;
+
+    // odd size = reference point in center of kernel
+    if (size % 2 == 1) {
+      return (size - 1) / 2;
+    }
+
+    // even size = reference from top left
+    int padw = ((outw - 1) * stride + 1) + (size - 1) - width;
+    int padh = ((outh - 1) * stride + 1) + (size - 1) - height;
+    int pad = (padw > padh) ? padw : padh;
+    return (pad > 0) ? pad : 0;
+}
+
 /// image::get_pixel, with padding uncommented
 float get_padded_pixel(image im, int x, int y, int c)
 {
@@ -76,35 +94,22 @@ matrix im2col(image im, int size, int stride)
 {
     int outw = (im.w-1)/stride + 1;
     int outh = (im.h-1)/stride + 1;
-    
     int rows = im.c*size*size;
     int cols = outw * outh;
+    int pad = compute_padding(im.w, im.h, size, stride);
     int size_sq = size * size;
 
     matrix col = make_matrix(rows, cols);
-    int pad = 0;
-    if (size % 2 == 1) {
-      pad = (size - 1) / 2;
-    } else {
-      pad = ((outw - 1) * stride + 1) + (size - 1) - im.w;
-      if (pad < 0) {
-        pad = 0;
-      }
-    }
-
     for (int c = 0; c < rows; ++c) {
       int c_im = c / size_sq;
-      int w_im = (c % size_sq) % size;
-      int h_im = (c % size_sq) / size;
+      int w_kernel = (c % size_sq) % size;
+      int h_kernel = (c % size_sq) / size;
       for (int j_col = 0; j_col < cols; ++j_col) {
         int w = j_col % outw;
         int h = (j_col / outw) % outh;
-        col.data[c * cols + j_col] = get_padded_pixel(
-            im,
-            w_im + w * stride - pad,
-            h_im + h * stride - pad,
-            c_im
-        );
+        int x = w * stride + w_kernel - pad;
+        int y = h * stride + h_kernel - pad;
+        col.data[c * cols + j_col] = get_padded_pixel(im, x, y, c_im);
       }
     }
     return col;
@@ -123,34 +128,22 @@ image col2im(int width, int height, int channels, matrix col, int size, int stri
     // Add values into image im from the column matrix
     int outw = (im.w-1)/stride + 1;
     int outh = (im.h-1)/stride + 1;
-    
     int rows = im.c*size*size;
     int cols = outw * outh;
+    int pad = compute_padding(im.w, im.h, size, stride);
     int size_sq = size * size;
-
-    int pad = 0;
-    if (size % 2 == 1) {
-      pad = (size - 1) / 2;
-    } else {
-      pad = ((outw - 1) * stride + 1) + (size - 1) - im.w;
-      if (pad < 0) {
-        pad = 0;
-      }
-    }
 
     for (int c = 0; c < rows; ++c) {
       int c_im = c / size_sq;
-      int w_im = (c % size_sq) % size;
-      int h_im = (c % size_sq) / size;
+      int w_kernel = (c % size_sq) % size;
+      int h_kernel = (c % size_sq) / size;
       for (int j_col = 0; j_col < cols; ++j_col) {
         int w = j_col % outw;
         int h = (j_col / outw) % outh;
-
-        int x = w_im + w * stride - pad;
-        int y = h_im + h * stride - pad;
-
+        int x = w_kernel + w * stride - pad;
+        int y = h_kernel + h * stride - pad;
         float value =
-            get_padded_pixel(im, x, y, c_im) + 
+            get_padded_pixel(im, x, y, c_im) +
             col.data[c * cols + j_col];
         set_padded_pixel(im, x, y, c_im, value);
       }
@@ -252,8 +245,6 @@ void update_convolutional_layer(layer l, float rate, float momentum, float decay
     axpy_matrix(decay, l.w, l.dw);
     axpy_matrix(-rate, l.dw, l.w);
     scal_matrix(momentum, l.dw);
-
-    // Do the same for biases as well but no need to use weight decay on biases
     axpy_matrix(-rate, l.db, l.b);
     scal_matrix(momentum, l.db);
 }
@@ -283,4 +274,3 @@ layer make_convolutional_layer(int w, int h, int c, int filters, int size, int s
     l.update   = update_convolutional_layer;
     return l;
 }
-

@@ -4,6 +4,8 @@
 #include <float.h>
 #include "uwnet.h"
 
+// implemented in convolutional_layer.c
+int compute_padding(int width, int height, int size, int stride);
 
 // Run a maxpool layer on input
 // layer l: pointer to layer to run
@@ -18,10 +20,10 @@ matrix forward_maxpool_layer(layer l, matrix in)
 
     int outw = (l.width-1)/l.stride + 1;
     int outh = (l.height-1)/l.stride + 1;
-    matrix out = make_matrix(in.rows, outw*outh*l.channels);
+    int size_sq = l.size * l.size;
 
     // TODO: 6.1 - iterate over the input and fill in the output with max values
-    int sizesq = l.size * l.size;
+    matrix out = make_matrix(in.rows, outw*outh*l.channels);
     for (int i = 0; i < in.rows; ++i) {
       image im = float_to_image(
         in.data + i*in.cols, l.width, l.height, l.channels
@@ -31,8 +33,8 @@ matrix forward_maxpool_layer(layer l, matrix in)
         int c_im = j / (outw * outh);
         int j_col = j % (outw * outh);
         float v_max = -FLT_MAX;
-        for (int k = 0; k < sizesq; ++k) {
-          int col_index = c_im * (outw * outh * sizesq) +
+        for (int k = 0; k < size_sq; ++k) {
+          int col_index = c_im * (outw * outh * size_sq) +
                           k * (outw * outh) + j_col;
           if (col.data[col_index] > v_max) {
             v_max = col.data[col_index];
@@ -55,21 +57,12 @@ matrix backward_maxpool_layer(layer l, matrix dy)
 
     int outw = (l.width-1)/l.stride + 1;
     int outh = (l.height-1)/l.stride + 1;
+    int pad = compute_padding(l.width, l.height, l.size, l.stride);
+    int size_sq = l.size * l.size;
+
     // TODO: 6.2 - find the max values in the input again and fill in the
     // corresponding delta with the delta from the output. This should be
     // similar to the forward method in structure.
-
-    int pad = 0;
-    if (l.size % 2 == 1) {
-      pad = (l.size - 1) / 2;
-    } else {
-      pad = ((outw - 1) * l.stride + 1) + (l.size - 1) - l.width;
-      if (pad < 0) {
-        pad = 0;
-      }
-    }
-
-    int sizesq = l.size * l.size;
     for (int i = 0; i < in.rows; ++i) {
       image im = float_to_image(
         in.data + i*in.cols, l.width, l.height, l.channels
@@ -80,8 +73,8 @@ matrix backward_maxpool_layer(layer l, matrix dy)
         int j_col = j % (outw * outh);
         float v_max = -FLT_MAX;
         int k_max = -1;
-        for (int k = 0; k < sizesq; ++k) {
-          int col_index = c_im * (outw * outh * sizesq) +
+        for (int k = 0; k < size_sq; ++k) {
+          int col_index = c_im * (outw * outh * size_sq) +
                           k * (outw * outh) + j_col;
           if (col.data[col_index] > v_max) {
             v_max = col.data[col_index];
@@ -92,10 +85,10 @@ matrix backward_maxpool_layer(layer l, matrix dy)
         if (k_max == -1)
           continue;
 
-        int w = j_col % outw;
-        int h = (j_col / outw) % outh;
         int w_kernel = k_max % l.size;
         int h_kernel = k_max / l.size;
+        int w = j_col % outw;
+        int h = (j_col / outw) % outh;
         int x = w * l.stride + w_kernel - pad;
         int y = h * l.stride + h_kernel - pad;
         if (x >= 0 && y >= 0 && x < l.width && y < l.height) {
@@ -136,4 +129,3 @@ layer make_maxpool_layer(int w, int h, int c, int size, int stride)
     l.update   = update_maxpool_layer;
     return l;
 }
-
